@@ -2,7 +2,7 @@ console.log("Some ducks here");
 
 var duck = {
   speed: 100,
-  x: 10,
+  x: 60,
   y: 10,
   width: 28,
   height: 28,
@@ -45,8 +45,10 @@ function handleInput() {
   // console.log("input");
   if (gameState.buttonState.LEFT) {
     gameState.duck.direction.x = -1;
+    gameState.duck.drawX = -1;
   } else if (gameState.buttonState.RIGHT) {
     gameState.duck.direction.x = 1;
+    gameState.duck.drawX = 1;
   } else {
     gameState.duck.direction.x = 0;
   }
@@ -57,7 +59,6 @@ function handleInput() {
 function update(modifier) {
   // console.log("update");
   // move duck!
-  debugger
   gameState.duck.x += gameState.duck.speed * gameState.duck.direction.x * modifier;
 }
 
@@ -67,7 +68,24 @@ function render() {
   gameState.ctx.clearRect(0,0,778,400);
 
   // draw duck!
-  gameState.ctx.drawImage(duckImage, gameState.duck.x, gameState.duck.y);
+  gameState.ctx.beginPath();
+  gameState.ctx.rect(gameState.duck.x, gameState.duck.y, gameState.duck.width, gameState.duck.height);
+  gameState.ctx.stroke();
+  gameState.ctx.save();
+  debugger
+  gameState.ctx.scale(gameState.duck.drawX, 1);
+  console.log(gameState.duck.x * gameState.duck.drawX,
+    gameState.duck.y,
+    gameState.duck.width,
+    gameState.duck.height);
+  gameState.ctx.drawImage(
+    duckImage,
+    gameState.duck.x * gameState.duck.drawX - (gameState.duck.drawX == 1 ? 0 : gameState.duck.width),
+    gameState.duck.y,
+    gameState.duck.width,
+    gameState.duck.height
+  );
+  gameState.ctx.restore();
 }
 
 function main() {
@@ -88,6 +106,8 @@ function init() {
   canvas.height = 400;
   gameState.ctx = ctx;
   document.body.appendChild(canvas);
+  gameState.duck.direction.x = 1;
+  gameState.duck.drawX = 1;
 }
 
 // setInterval(main, 1);
