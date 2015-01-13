@@ -1,15 +1,40 @@
 console.log("Some ducks here");
 
+function lerp(v0, v1, t) {
+  return (1-t)*v0 + t*v1;
+}
+
+function normalAcc(v0, v1) {
+  return lerp(v0, v1, .5);
+}
+
+function normalDec(v0, v1) {
+  return lerp(v1, v0, .001);
+}
+
 var duck = {
-  speed: 100,
+  speed: 200,
+  curSpeed: 0,
   x: 60,
   y: 10,
+  threshold: 5,
   width: 28,
   height: 28,
-  direction : {x:0}
+  moving: 0 // -1 to 1
 }
+duck.copy = function() {
+  var other = {};
+  for(item in this) {
+    other[item] = this[item];
+  }
+  return other
+};
+
 var duckImage = new Image();
-duckImage.src = "images/duck.png";
+duckImage.src = "images/duck2.png";
+var duckFrontImage = new Image();
+duckFrontImage.src = "images/duck_front.png";
+duck.sprite = duckImage;
 
 var gameState = {};
 gameState.buttonState = { // left right arrow and space only
@@ -41,25 +66,46 @@ window.addEventListener('keyup', function(e) {
   }
 }, false);
 
+//Buttons are not getting released as expected, need to fix
 function handleInput() {
-  // console.log("input");
   if (gameState.buttonState.LEFT) {
-    gameState.duck.direction.x = -1;
+    debugger
+    gameState.duck.moving = -1;
     gameState.duck.drawX = -1;
+    gameState.buttonState.RIGHT = false;
   } else if (gameState.buttonState.RIGHT) {
-    gameState.duck.direction.x = 1;
+    gameState.duck.moving = 1;
     gameState.duck.drawX = 1;
+    gameState.buttonState.LEFT = false;
   } else {
-    gameState.duck.direction.x = 0;
+    gameState.duck.moving = 0;
+    gameState.buttonState.RIGHT = false;
+    gameState.buttonState.LEFT = false;
   }
-  // delete gameState.buttonState.LEFT;
-  // delete gameState.buttonState.RIGHT;
+    gameState.buttonState.RIGHT = false;
+    gameState.buttonState.LEFT = false;
 }
 
+// add vectors for movement
 function update(modifier) {
-  // console.log("update");
-  // move duck!
-  gameState.duck.x += gameState.duck.speed * gameState.duck.direction.x * modifier;
+  // if not moving we should slow down
+  // console.log("old, new", gameState.lastDuck.x, gameState.duck.x);
+  console.log("speed", gameState.duck.curSpeed);
+  console.log("moving", gameState.duck.moving);
+  if (gameState.duck.moving == 0) {
+    // console.log("slowing down", gameState.lastDuck.moving);
+    // debugger
+    if (gameState.duck.curSpeed > (gameState.duck.threshold)) {
+      gameState.duck.curSpeed = normalDec(gameState.duck.curSpeed, gameState.duck.speed);
+      gameState.duck.x += gameState.duck.curSpeed * gameState.duck.moving * modifier;
+    }
+    gameState.duck.sprite = duckImage;
+  } else { // accelerate duck up
+    gameState.duck.curSpeed = normalAcc(gameState.duck.curSpeed, gameState.duck.speed);
+    gameState.duck.x += gameState.duck.curSpeed * gameState.duck.moving * modifier;
+    gameState.duck.sprite = duckImage;
+  }
+  gameState.lastDuck = gameState.duck.copy();
 }
 
 function render() {
@@ -72,14 +118,9 @@ function render() {
   gameState.ctx.rect(gameState.duck.x, gameState.duck.y, gameState.duck.width, gameState.duck.height);
   gameState.ctx.stroke();
   gameState.ctx.save();
-  debugger
   gameState.ctx.scale(gameState.duck.drawX, 1);
-  console.log(gameState.duck.x * gameState.duck.drawX,
-    gameState.duck.y,
-    gameState.duck.width,
-    gameState.duck.height);
   gameState.ctx.drawImage(
-    duckImage,
+    gameState.duck.sprite,
     gameState.duck.x * gameState.duck.drawX - (gameState.duck.drawX == 1 ? 0 : gameState.duck.width),
     gameState.duck.y,
     gameState.duck.width,
@@ -89,9 +130,9 @@ function render() {
 }
 
 function main() {
+  handleInput();
   var now = Date.now();
   var delta = now - then;
-  handleInput();
   update(delta/1000);
   render();
   then = now;
@@ -106,11 +147,11 @@ function init() {
   canvas.height = 400;
   gameState.ctx = ctx;
   document.body.appendChild(canvas);
-  gameState.duck.direction.x = 1;
+  gameState.duck.moving = 1;
   gameState.duck.drawX = 1;
+  gameState.lastDuck = gameState.duck.copy();
 }
 
-// setInterval(main, 1);
 var w = window;
 requestAnimationFrame = w.requestAnimationFrame || w.webkitRequestAnimationFrame || w.msRequestAnimationFrame || w.mozRequestAnimationFrame;
 
