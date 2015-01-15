@@ -50,11 +50,20 @@ var Buttons = {
   '32': 'SPACE'
 }
 
+
 window.addEventListener('keydown', function(e) {
   var button = Buttons[e.keyCode];
   if (button !== undefined) {
-    gameState.buttonState[button] = true;
-    console.log(gameState.buttonState);
+    console.log("down", gameState.buttonState);
+    // if already true, repeated keypress
+    if (gameState.buttonState[button]) {
+      console.log("key repeat", button);
+      gameState.buttonState.repeat = true;
+    } else {
+      gameState.buttonState[button] = true;
+      gameState.buttonState.repeat = false;
+      gameState.buttonState.heldLength = Date.now();
+    }
   }
 }, false);
 
@@ -62,36 +71,44 @@ window.addEventListener('keyup', function(e) {
   var button = Buttons[e.keyCode];
   if (button !== undefined) {
     gameState.buttonState[button] = false;
-    console.log(gameState.buttonState);
+    console.log("up", gameState.buttonState);
+    gameState.buttonState.repeat = false;
+    gameState.buttonState.heldLength = 0;
   }
 }, false);
 
 //Buttons are not getting released as expected, need to fix
 function handleInput() {
   if (gameState.buttonState.LEFT) {
-    debugger
-    gameState.duck.moving = -1;
-    gameState.duck.drawX = -1;
-    gameState.buttonState.RIGHT = false;
+    // debugger
+    var howLong = Date.now() - gameState.buttonState.heldLength;
+    if (howLong >=0 && howLong < 80) {
+      console.log("Should we just turn?", howLong);
+      gameState.duck.moving = 0;
+    } else {
+      gameState.duck.moving = -1;
+    }
+    gameState.duck.facing = -1;
+    // gameState.buttonState.LEFT = false;
   } else if (gameState.buttonState.RIGHT) {
     gameState.duck.moving = 1;
-    gameState.duck.drawX = 1;
-    gameState.buttonState.LEFT = false;
+    gameState.duck.facing = 1;
+    // gameState.buttonState.RIGHT = false;
   } else {
     gameState.duck.moving = 0;
-    gameState.buttonState.RIGHT = false;
-    gameState.buttonState.LEFT = false;
+    // gameState.buttonState.RIGHT = false;
+    // gameState.buttonState.LEFT = false;
   }
-    gameState.buttonState.RIGHT = false;
-    gameState.buttonState.LEFT = false;
+    // gameState.buttonState.RIGHT = false;
+    // gameState.buttonState.LEFT = false;
 }
 
 // add vectors for movement
 function update(modifier) {
   // if not moving we should slow down
   // console.log("old, new", gameState.lastDuck.x, gameState.duck.x);
-  console.log("speed", gameState.duck.curSpeed);
-  console.log("moving", gameState.duck.moving);
+  // console.log("speed", gameState.duck.curSpeed);
+  // console.log("moving", gameState.duck.moving);
   if (gameState.duck.moving == 0) {
     // console.log("slowing down", gameState.lastDuck.moving);
     // debugger
@@ -118,10 +135,10 @@ function render() {
   gameState.ctx.rect(gameState.duck.x, gameState.duck.y, gameState.duck.width, gameState.duck.height);
   gameState.ctx.stroke();
   gameState.ctx.save();
-  gameState.ctx.scale(gameState.duck.drawX, 1);
+  gameState.ctx.scale(gameState.duck.facing, 1);
   gameState.ctx.drawImage(
     gameState.duck.sprite,
-    gameState.duck.x * gameState.duck.drawX - (gameState.duck.drawX == 1 ? 0 : gameState.duck.width),
+    gameState.duck.x * gameState.duck.facing - (gameState.duck.facing == 1 ? 0 : gameState.duck.width),
     gameState.duck.y,
     gameState.duck.width,
     gameState.duck.height
@@ -148,8 +165,9 @@ function init() {
   gameState.ctx = ctx;
   document.body.appendChild(canvas);
   gameState.duck.moving = 1;
-  gameState.duck.drawX = 1;
+  gameState.duck.facing = 1;
   gameState.lastDuck = gameState.duck.copy();
+  gameState.buttonState.heldLength = 0;
 }
 
 var w = window;
