@@ -1,5 +1,13 @@
 console.log("Some ducks here");
 
+console.logger = function(print, func) {
+  if (print) {
+    func();
+  } else {
+    return
+  }
+};
+
 function lerp(v0, v1, t) {
   return (1-t)*v0 + t*v1;
 }
@@ -8,19 +16,33 @@ function normalAcc(v0, v1) {
   return lerp(v0, v1, .5);
 }
 
-function normalDec(v0, v1) {
-  return lerp(v1, v0, .001);
+function normalDec(v1) {
+  return lerp(v1, 0, .3);
 }
 
+var levelWidth = 778;
+var levelHeight = 400;
+var playerGround = 300 - 28 + 10;
+
+var jumpDecay = 0.7;
+var gravity = 200;
+var gravityAffect = 450;
+
 var duck = {
-  speed: 200,
+  speed: 175,
   curSpeed: 0,
+  jumpSpeed: 1200,
+  curJump: 0,
   x: 60,
-  y: 10,
+  y: playerGround, // ground - height + spacer
   threshold: 5,
   width: 28,
   height: 28,
-  moving: 0 // -1 to 1
+  moving: 0, // -1 to 1
+  facing: 1,
+  directionChange: 0,
+  jump: false,
+  finishedJump: true
 }
 duck.copy = function() {
   var other = {};
@@ -36,34 +58,53 @@ var duckFrontImage = new Image();
 duckFrontImage.src = "images/duck_front.png";
 duck.sprite = duckImage;
 
-var gameState = {};
+var bg = {
+  speed: 1,
+  x: 0,
+  y: 0
+};
+var bgStars = new Image();
+bgStars.src = "images/star-bg.png";
+
+var gameState = {debug: false};
 gameState.buttonState = { // left right arrow and space only
   LEFT: false,
   RIGHT: false,
   SPACE: false
 };
 gameState.duck = duck;
+gameState.bg = bg;
 
 var Buttons = {
   '37': 'LEFT',
   '39': 'RIGHT',
-  '32': 'SPACE'
-}
+  '32': 'SPACE',
+  '87': 'W'
+};
 
+var gameHistory = {
+  'commands': [],
+  'start': {},
+  'commandCount': 0
+}
 
 window.addEventListener('keydown', function(e) {
   var button = Buttons[e.keyCode];
   if (button !== undefined) {
-    console.log("down", gameState.buttonState);
     // if already true, repeated keypress
     if (gameState.buttonState[button]) {
-      console.log("key repeat", button);
+      console.logger(gameState.debug, function() {
+        console.log("key repeat", button);
+      });
       gameState.buttonState.repeat = true;
     } else {
       gameState.buttonState[button] = true;
       gameState.buttonState.repeat = false;
       gameState.buttonState.heldLength = Date.now();
     }
+    console.logger(gameState.debug, function() {
+      console.log("down", gameState.buttonState);
+    });
   }
 }, false);
 
@@ -71,69 +112,190 @@ window.addEventListener('keyup', function(e) {
   var button = Buttons[e.keyCode];
   if (button !== undefined) {
     gameState.buttonState[button] = false;
-    console.log("up", gameState.buttonState);
+    console.logger(gameState.debug, function() {
+      console.log("up", gameState.buttonState);
+    });
     gameState.buttonState.repeat = false;
     gameState.buttonState.heldLength = 0;
   }
 }, false);
 
 //Buttons are not getting released as expected, need to fix
-function handleInput() {
+function handleInput(now) {
+  if (gameState.buttonState.W && (now - gameState.buttonState.heldLength < 15)) {
+    console.logger(gameState.debug, function() {
+      console.log('pressed w');
+    });
+    if (gameState.record) {
+      console.logger(gameState.debug, function() {
+        console.log("starting playback");
+      });
+      gameState.play = true;
+      gameState.record = false;
+      gameState.duck = gameHistory.start.copy();
+    } else if (gameState.play) {
+      console.logger(gameState.debug, function() {
+        console.log("stopping playback");
+      });
+      gameState.play = false;
+    } else {
+      gameHistory.start = gameState.duck.copy();
+      console.logger(gameState.debug, function() {
+        console.log('record!');
+      });
+      gameState.record = true;
+    }
+  }
+  if (gameState.record === true) {
+    gameHistory.commands.push(JSON.stringify(gameState.buttonState));
+  }
+  if (gameState.play === true) {
+    gameState.buttonState = JSON.parse(gameHistory.commands[gameHistory.commandCount++]);
+    if (gameHistory.commandCount >= gameHistory.commands.length) {
+      gameHistory.commandCount = 0;
+      gameState.duck = gameHistory.start.copy();
+    }
+  }
+
+  var howLong = now - gameState.buttonState.heldLength;
   if (gameState.buttonState.LEFT) {
-    // debugger
-    var howLong = Date.now() - gameState.buttonState.heldLength;
-    if (howLong >=0 && howLong < 80) {
-      console.log("Should we just turn?", howLong);
-      gameState.duck.moving = 0;
+    gameState.duck.facing = -1;
+    if (gameState.duck.facing != gameState.lastDuck.facing) {
+      gameState.duck.directionChange = now;
+    }
+    if (gameState.duck.directionChange) {
+      if (now - gameState.duck.directionChange > 100){
+        gameState.duck.moving = -1;
+        gameState.duck.directionChange = undefined;
+      } else {
+        gameState.duck.moving = 0;
+      }
     } else {
       gameState.duck.moving = -1;
     }
-    gameState.duck.facing = -1;
-    // gameState.buttonState.LEFT = false;
   } else if (gameState.buttonState.RIGHT) {
-    gameState.duck.moving = 1;
     gameState.duck.facing = 1;
-    // gameState.buttonState.RIGHT = false;
+    if (gameState.duck.facing != gameState.lastDuck.facing) {
+      gameState.duck.directionChange = now;
+    }
+    if (gameState.duck.directionChange) {
+      if (now - gameState.duck.directionChange > 100){
+        gameState.duck.moving = 1;
+        gameState.duck.directionChange = undefined;
+      } else {
+        gameState.duck.moving = 0;
+      }
+    } else {
+      gameState.duck.moving = 1;
+    }
   } else {
     gameState.duck.moving = 0;
-    // gameState.buttonState.RIGHT = false;
-    // gameState.buttonState.LEFT = false;
   }
-    // gameState.buttonState.RIGHT = false;
-    // gameState.buttonState.LEFT = false;
+
+  var jumpHeld = Date.now() - gameState.buttonState.heldLength;
+  if (gameState.buttonState.SPACE) {
+    if (gameState.duck.finishedJump) { // only trigger one jump
+      console.log("hit jump~!");
+      gameState.duck.jump = true;
+      gameState.duck.stillJump = true;
+      gameState.duck.finishedJump = false;
+    }
+
+    if (jumpHeld > 150) {
+      gameState.duck.stillJump = false;
+    }
+  } else if (gameState.lastDuck.stillJump) {
+    gameState.duck.stillJump = false;
+  }
 }
 
 // add vectors for movement
 function update(modifier) {
-  // if not moving we should slow down
-  // console.log("old, new", gameState.lastDuck.x, gameState.duck.x);
-  // console.log("speed", gameState.duck.curSpeed);
-  // console.log("moving", gameState.duck.moving);
   if (gameState.duck.moving == 0) {
-    // console.log("slowing down", gameState.lastDuck.moving);
-    // debugger
     if (gameState.duck.curSpeed > (gameState.duck.threshold)) {
-      gameState.duck.curSpeed = normalDec(gameState.duck.curSpeed, gameState.duck.speed);
-      gameState.duck.x += gameState.duck.curSpeed * gameState.duck.moving * modifier;
+      gameState.duck.curSpeed = normalDec(gameState.duck.curSpeed);
+      gameState.duck.x += gameState.duck.curSpeed * gameState.duck.facing * modifier;
     }
     gameState.duck.sprite = duckImage;
   } else { // accelerate duck up
-    gameState.duck.curSpeed = normalAcc(gameState.duck.curSpeed, gameState.duck.speed);
-    gameState.duck.x += gameState.duck.curSpeed * gameState.duck.moving * modifier;
+    // Not sure if I like this
+    if (gameState.duck.jump) {
+      gameState.duck.curSpeed = normalAcc(gameState.duck.curSpeed, gameState.duck.speed-50);
+    } else {
+      gameState.duck.curSpeed = normalAcc(gameState.duck.curSpeed, gameState.duck.speed);
+    }
+    gameState.duck.x += gameState.duck.curSpeed * gameState.duck.facing * modifier;
     gameState.duck.sprite = duckImage;
+    gameState.bg.x -= gameState.bg.speed * gameState.duck.facing;
+  }
+
+  if (gameState.duck.jump) {
+    gameState.duck.sprite = duckFrontImage;
+    if (gameState.duck.stillJump) {
+      gameState.duck.curJump = gameState.duck.jumpSpeed;
+      // gameState.duck.stillJump = false;
+    }
+    if (gameState.duck.curJump > gameState.duck.threshold) {
+      console.log("jump!", gameState.duck.curJump);
+      gameState.duck.y -= gameState.duck.curJump * modifier;
+      gameState.duck.curJump = lerp(0, gameState.duck.curJump, jumpDecay);
+    }
+    // "accelerate" duck up Y axis
+  } else {
+    gameState.duck.sprite = duckImage;
+  }
+
+  // off ground, add gravity
+  if (gameState.duck.y < playerGround) {
+    console.log('off ground');
+    gravity = lerp(gravity, gravityAffect, .4);
+    gameState.duck.y += gravity * modifier;
+  } else if (gameState.duck.jump) {
+    gameState.duck.jump = false;
+    gameState.duck.finishedJump = true;
+    gravity = 200;
+  }
+
+  // Bounds checking
+  if (gameState.bg.x < -levelWidth ||
+      gameState.bg.x > levelWidth) {
+    gameState.bg.x = 0;
+  }
+
+  if (gameState.duck.x <=0) {
+    gameState.duck.x = 0;
+    gameState.duck.moving = 0;
+  }
+
+  if (gameState.duck.x + 28 >= levelWidth) {
+    gameState.duck.x = levelWidth - 28;
+    gameState.duck.moving = 0;
   }
   gameState.lastDuck = gameState.duck.copy();
 }
 
 function render() {
-  // console.log("render");
+  gameState.ctx.clearRect(0,0,levelWidth,levelHeight);
   // draw "bg"
-  gameState.ctx.clearRect(0,0,778,400);
+  gameState.bgCtx.drawImage(bgStars, gameState.bg.x - levelWidth, 0, levelWidth, levelHeight); // left
+  gameState.bgCtx.drawImage(bgStars, gameState.bg.x, 0, levelWidth, levelHeight); // middle
+  gameState.bgCtx.drawImage(bgStars, gameState.bg.x + levelWidth, 0, levelWidth, levelHeight); // right
+  // draw ground
+  gameState.ctx.fillStyle = "#733572";
+  gameState.ctx.fillRect(0,300,levelWidth,100);
+  gameState.ctx.beginPath();
+  gameState.ctx.lineWidth = "2";
+  gameState.ctx.strokeStyle = "#040110";
+  gameState.ctx.moveTo(0, 300);
+  gameState.ctx.lineTo(levelWidth, 300);
+  gameState.ctx.stroke();
 
   // draw duck!
-  gameState.ctx.beginPath();
-  gameState.ctx.rect(gameState.duck.x, gameState.duck.y, gameState.duck.width, gameState.duck.height);
-  gameState.ctx.stroke();
+  if (gameState.debug) {
+    gameState.ctx.beginPath();
+    gameState.ctx.rect(gameState.duck.x, gameState.duck.y, gameState.duck.width, gameState.duck.height);
+    gameState.ctx.stroke();
+  }
   gameState.ctx.save();
   gameState.ctx.scale(gameState.duck.facing, 1);
   gameState.ctx.drawImage(
@@ -146,28 +308,38 @@ function render() {
   gameState.ctx.restore();
 }
 
-function main() {
-  handleInput();
+function main(n) {
   var now = Date.now();
+  // console.log("n,now", n, now);
   var delta = now - then;
+  handleInput(now);
   update(delta/1000);
   render();
   then = now;
   requestAnimationFrame(main);
 }
 
+function createCanvas(width, height) {
+  var canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  return canvas
+}
+
 function init() {
   // create canvas, add to game object
-  var canvas = document.createElement('canvas');
-  var ctx = canvas.getContext('2d');
-  canvas.width = 778;
-  canvas.height = 400;
-  gameState.ctx = ctx;
+  var bgCanvas = createCanvas(levelWidth, levelHeight);
+  var canvas = createCanvas(levelWidth, levelHeight);
+  gameState.ctx = canvas.getContext('2d');
+  gameState.bgCtx = bgCanvas.getContext('2d');
+  canvas.style.background = 'transparent';
+  document.body.appendChild(bgCanvas);
   document.body.appendChild(canvas);
   gameState.duck.moving = 1;
   gameState.duck.facing = 1;
   gameState.lastDuck = gameState.duck.copy();
   gameState.buttonState.heldLength = 0;
+  // draw ground
 }
 
 var w = window;
