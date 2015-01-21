@@ -20,9 +20,25 @@ function normalDec(v1) {
   return lerp(v1, 0, .3);
 }
 
-var levelWidth = 778;
-var levelHeight = 400;
-var playerGround = 300 - 28 + 10;
+var camera = {
+  x: 0,
+  y: 0, // Center of camera
+  width: 800,
+  height: 450
+};
+
+// super naive level
+var level = {
+  width: 1500,
+  height: 400,
+  ground: 300 - 28 + 10, // convert to "world" coords
+  blockSize: 28,
+  data: [] // Format: {startX:0, startY:0, width: 'in blocks', height: 'in blocks'}
+};
+
+level.data.push({x: 500, y: 0, width: 2, height: 2});
+level.data.push({x: 1000, y: 0, width: 2, height: 2});
+level.data.push({x: 1250, y: 0, width: 2, height: 2});
 
 var jumpDecay = 0.7;
 var gravity = 200;
@@ -33,8 +49,8 @@ var duck = {
   curSpeed: 0,
   jumpSpeed: 1200,
   curJump: 0,
-  x: 60,
-  y: playerGround, // ground - height + spacer
+  x: level.width/2 - (28/2),
+  y: level.ground, // ground - height + spacer
   threshold: 5,
   width: 28,
   height: 28,
@@ -59,9 +75,11 @@ duckFrontImage.src = "images/duck_front.png";
 duck.sprite = duckImage;
 
 var bg = {
-  speed: 1,
+  speed: 0.5,
   x: 0,
-  y: 0
+  y: 0,
+  width: 778,
+  height: 400
 };
 var bgStars = new Image();
 bgStars.src = "images/star-bg.png";
@@ -207,6 +225,11 @@ function handleInput(now) {
   } else if (gameState.lastDuck.stillJump) {
     gameState.duck.stillJump = false;
   }
+
+  // Camera, work on bounds and "follow" feel later
+  // if (gameState.duck.x > camera.width - (camera.width/4)) {
+    camera.x = duck.x
+  // }
 }
 
 // add vectors for movement
@@ -246,7 +269,7 @@ function update(modifier) {
   }
 
   // off ground, add gravity
-  if (gameState.duck.y < playerGround) {
+  if (gameState.duck.y < level.ground) {
     console.log('off ground');
     gravity = lerp(gravity, gravityAffect, .4);
     gameState.duck.y += gravity * modifier;
@@ -256,9 +279,9 @@ function update(modifier) {
     gravity = 200;
   }
 
-  // Bounds checking
-  if (gameState.bg.x < -levelWidth ||
-      gameState.bg.x > levelWidth) {
+  // TODO: Update to move with camera, not level (maybe?)
+  if (gameState.bg.x < -level.width ||
+      gameState.bg.x > level.width) {
     gameState.bg.x = 0;
   }
 
@@ -267,44 +290,62 @@ function update(modifier) {
     gameState.duck.moving = 0;
   }
 
-  if (gameState.duck.x + 28 >= levelWidth) {
-    gameState.duck.x = levelWidth - 28;
+  // TODO: Should update to bound inside camera
+  if (gameState.duck.x + 28 >= level.width) {
+    gameState.duck.x = level.width - 28;
     gameState.duck.moving = 0;
   }
   gameState.lastDuck = gameState.duck.copy();
 }
 
 function render() {
-  gameState.ctx.clearRect(0,0,levelWidth,levelHeight);
+  // Should only clear viewport
+  gameState.ctx.clearRect(0,0,camera.width,camera.height);
   // draw "bg"
-  gameState.bgCtx.drawImage(bgStars, gameState.bg.x - levelWidth, 0, levelWidth, levelHeight); // left
-  gameState.bgCtx.drawImage(bgStars, gameState.bg.x, 0, levelWidth, levelHeight); // middle
-  gameState.bgCtx.drawImage(bgStars, gameState.bg.x + levelWidth, 0, levelWidth, levelHeight); // right
-  // draw ground
+  gameState.bgCtx.drawImage(bgStars, gameState.bg.x - bg.width, 0, bg.width, bg.height); // left
+  gameState.bgCtx.drawImage(bgStars, gameState.bg.x, 0, bg.width, bg.height); // middle
+  gameState.bgCtx.drawImage(bgStars, gameState.bg.x + bg.width, 0, bg.width, bg.height); // right
+
+  // draw the level, ground and all 
   gameState.ctx.fillStyle = "#733572";
-  gameState.ctx.fillRect(0,300,levelWidth,100);
+  gameState.ctx.fillRect(0,300,level.width,100);
   gameState.ctx.beginPath();
   gameState.ctx.lineWidth = "2";
   gameState.ctx.strokeStyle = "#040110";
   gameState.ctx.moveTo(0, 300);
-  gameState.ctx.lineTo(levelWidth, 300);
+  gameState.ctx.lineTo(level.width, 300);
   gameState.ctx.stroke();
+
+
+  // level data
+  gameState.ctx.save();
+  gameState.ctx.translate(camera.x, camera.y);
+  for (var i = 0; i<level.data.length; i++) {
+    gameState.ctx.fillStyle = "#11da7e";
+    gameState.ctx.fillRect(
+      level.data[i].x,
+      level.data[i].y,
+      level.data[i].width * level.blockSize,
+      level.data[i].height * level.blockSize
+    );
+  }
 
   // draw duck!
   if (gameState.debug) {
     gameState.ctx.beginPath();
-    gameState.ctx.rect(gameState.duck.x, gameState.duck.y, gameState.duck.width, gameState.duck.height);
+    gameState.ctx.rect(gameState.duck.x - camera.x, gameState.duck.y - camera.y, gameState.duck.width, gameState.duck.height);
     gameState.ctx.stroke();
   }
   gameState.ctx.save();
   gameState.ctx.scale(gameState.duck.facing, 1);
   gameState.ctx.drawImage(
     gameState.duck.sprite,
-    gameState.duck.x * gameState.duck.facing - (gameState.duck.facing == 1 ? 0 : gameState.duck.width),
-    gameState.duck.y,
+    gameState.duck.x * gameState.duck.facing - (gameState.duck.facing == 1 ? 0 : gameState.duck.width), // "move" sprite over by width if reversing
+    gameState.duck.y - camera.y,
     gameState.duck.width,
     gameState.duck.height
   );
+  gameState.ctx.restore();
   gameState.ctx.restore();
 }
 
@@ -328,8 +369,8 @@ function createCanvas(width, height) {
 
 function init() {
   // create canvas, add to game object
-  var bgCanvas = createCanvas(levelWidth, levelHeight);
-  var canvas = createCanvas(levelWidth, levelHeight);
+  var bgCanvas = createCanvas(camera.width, camera.height);
+  var canvas = createCanvas(camera.width, camera.height);
   gameState.ctx = canvas.getContext('2d');
   gameState.bgCtx = bgCanvas.getContext('2d');
   canvas.style.background = 'transparent';
