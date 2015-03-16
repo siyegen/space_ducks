@@ -347,6 +347,7 @@ function render() {
   );
   gameState.ctx.restore();
   gameState.ctx.restore();
+  gameState.ctx.setTransform(1,0,0,1,0,0);
 }
 
 function main(n) {
