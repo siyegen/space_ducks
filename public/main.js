@@ -1,4 +1,34 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+module.exports = Duck;
+
+function Duck(startPos, duckImg) {
+    var texture = PIXI.Texture.fromImage(duckImg);
+    PIXI.Sprite.call(this, texture);
+    this.position.x = startPos.x;
+    this.position.y = startPos.y;// check ground height
+    // center the sprites anchor point
+    this.anchor.x = 0.5;
+    this.anchor.y = 0.5;
+
+    // var sprite = duckImg;
+    // var jumpSprite = duckJumpImg;
+};
+
+Duck.prototype.constructor = Duck;
+Duck.prototype = Object.create(PIXI.Sprite.prototype);
+
+Duck.prototype.update = function(timeDelta) {
+  if (this.moving == -1) {
+    this.position.x -= 1;
+  }
+  if (this.moving == 1) {
+    this.position.x += 1;
+  }
+  this.rotation += 0.1;
+}
+
+
+},{}],2:[function(require,module,exports){
 console.log("Ducks in Space, there are ducks in Spaaace");
 var debug = true;
 
@@ -9,6 +39,8 @@ console.logger = function(print, func) {
     return
   }
 };
+
+var Duck = require('./duck.js');
 
 function Game() {
 
@@ -75,26 +107,23 @@ function Game() {
     // add the renderer view element to the DOM
     document.body.appendChild(renderer.view);
     registerListeners();
-    var texture = PIXI.Texture.fromImage("images/duck2.png");
-    // create a new Sprite using the texture
-    this.duck = new PIXI.Sprite(texture);
- 
-    // center the sprites anchor point
-    this.duck.anchor.x = 0.5;
-    this.duck.anchor.y = 0.5;
- 
-    // move the sprite t the center of the screen
-    this.duck.position.x = 200;
-    this.duck.position.y = 150;
+    this.duck = new Duck({x: 200, y: 150}, "images/duck2.png");
  
     stage.addChild(this.duck);
   };
 
   var handleInput = function() {
+    if (buttonState.LEFT) {
+      this.duck.moving = -1;
+    } else if (buttonState.RIGHT) {
+      this.duck.moving = 1;
+    } else {
+      this.duck.moving = 0;
+    }
   };
 
   var update = function(timeDelta) {
-    this.duck.rotation += 0.2;
+    this.duck.update(timeDelta);
   };
 
   var render = function() {
@@ -122,4 +151,4 @@ function Game() {
 
 var game = new Game();
 game.start();
-},{}]},{},[1])
+},{"./duck.js":1}]},{},[2])

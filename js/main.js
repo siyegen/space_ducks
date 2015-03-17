@@ -9,6 +9,8 @@ console.logger = function(print, func) {
   }
 };
 
+var Duck = require('./duck.js');
+
 function Game() {
 
   var buttonState = { // left right arrow and space only
@@ -74,26 +76,23 @@ function Game() {
     // add the renderer view element to the DOM
     document.body.appendChild(renderer.view);
     registerListeners();
-    var texture = PIXI.Texture.fromImage("images/duck2.png");
-    // create a new Sprite using the texture
-    this.duck = new PIXI.Sprite(texture);
- 
-    // center the sprites anchor point
-    this.duck.anchor.x = 0.5;
-    this.duck.anchor.y = 0.5;
- 
-    // move the sprite t the center of the screen
-    this.duck.position.x = 200;
-    this.duck.position.y = 150;
+    this.duck = new Duck({x: 200, y: 150}, "images/duck2.png");
  
     stage.addChild(this.duck);
   };
 
   var handleInput = function() {
+    if (buttonState.LEFT) {
+      this.duck.moving = -1;
+    } else if (buttonState.RIGHT) {
+      this.duck.moving = 1;
+    } else {
+      this.duck.moving = 0;
+    }
   };
 
   var update = function(timeDelta) {
-    this.duck.rotation += 0.2;
+    this.duck.update(timeDelta);
   };
 
   var render = function() {
