@@ -1,3 +1,14 @@
+console.log("Ducks in Space, there are ducks in Spaaace");
+var debug = true;
+
+console.logger = function(print, func) {
+  if (print) {
+    func();
+  } else {
+    return
+  }
+};
+
 function Game() {
 
   var buttonState = { // left right arrow and space only
@@ -24,18 +35,18 @@ function Game() {
       var button = Buttons[e.keyCode];
       if (button !== undefined) {
         // if already true, repeated keypress
-        if (gameState.buttonState[button]) {
-          console.logger(gameState.debug, function() {
+        if (buttonState[button]) {
+          console.logger(debug, function() {
             console.log("key repeat", button);
           });
-          gameState.buttonState.repeat = true;
+          buttonState.repeat = true;
         } else {
-          gameState.buttonState[button] = true;
-          gameState.buttonState.repeat = false;
-          gameState.buttonState.heldLength = Date.now();
+          buttonState[button] = true;
+          buttonState.repeat = false;
+          buttonState.heldLength = Date.now();
         }
-        console.logger(gameState.debug, function() {
-          console.log("down", gameState.buttonState);
+        console.logger(debug, function() {
+          console.log("down", buttonState);
         });
       }
     }, false);
@@ -43,89 +54,50 @@ function Game() {
     window.addEventListener('keyup', function(e) {
       var button = Buttons[e.keyCode];
       if (button !== undefined) {
-        gameState.buttonState[button] = false;
-        console.logger(gameState.debug, function() {
-          console.log("up", gameState.buttonState);
+        buttonState[button] = false;
+        console.logger(debug, function() {
+          console.log("up", buttonState);
         });
-        gameState.buttonState.repeat = false;
-        gameState.buttonState.heldLength = 0;
+        buttonState.repeat = false;
+        buttonState.heldLength = 0;
       }
     }, false);
   };
 
   var init = function() {
-    this.requestAnimationFrame = window.requestAnimationFrame;
+    this.requestAnimFrame = window.requestAnimFrame;
 
+    this.stage = new PIXI.Stage(0x66FF99);
+ 
+    // create a renderer instance.
+    this.renderer = PIXI.autoDetectRenderer(400, 300);
+    // add the renderer view element to the DOM
+    document.body.appendChild(renderer.view);
+    registerListeners();
+    var texture = PIXI.Texture.fromImage("images/duck2.png");
+    // create a new Sprite using the texture
+    this.duck = new PIXI.Sprite(texture);
+ 
+    // center the sprites anchor point
+    this.duck.anchor.x = 0.5;
+    this.duck.anchor.y = 0.5;
+ 
+    // move the sprite t the center of the screen
+    this.duck.position.x = 200;
+    this.duck.position.y = 150;
+ 
+    stage.addChild(this.duck);
   };
 
   var handleInput = function() {
-    for (ops in buttonState) {
-      if (buttonState[ops]) {
-        console.log("button pressed", ops);
-      }
-    }
-    // if (gameState.buttonState.LEFT) {
-    //   gameState.duck.facing = -1;
-    //   if (gameState.duck.facing != gameState.lastDuck.facing) {
-    //     gameState.duck.directionChange = now;
-    //   }
-    //   if (gameState.duck.directionChange) {
-    //     if (now - gameState.duck.directionChange > 100){
-    //       gameState.duck.moving = -1;
-    //       gameState.duck.directionChange = undefined;
-    //     } else {
-    //       gameState.duck.moving = 0;
-    //     }
-    //   } else {
-    //     gameState.duck.moving = -1;
-    //   }
-    // } else if (gameState.buttonState.RIGHT) {
-    //   gameState.duck.facing = 1;
-    //   if (gameState.duck.facing != gameState.lastDuck.facing) {
-    //     gameState.duck.directionChange = now;
-    //   }
-    //   if (gameState.duck.directionChange) {
-    //     if (now - gameState.duck.directionChange > 100){
-    //       gameState.duck.moving = 1;
-    //       gameState.duck.directionChange = undefined;
-    //     } else {
-    //       gameState.duck.moving = 0;
-    //     }
-    //   } else {
-    //     gameState.duck.moving = 1;
-    //   }
-    // } else {
-    //   gameState.duck.moving = 0;
-    // }
-
-    // var jumpHeld = Date.now() - gameState.buttonState.heldLength;
-    // if (gameState.buttonState.SPACE) {
-    //   if (gameState.duck.finishedJump) { // only trigger one jump
-    //     console.log("hit jump~!");
-    //     gameState.duck.jump = true;
-    //     gameState.duck.stillJump = true;
-    //     gameState.duck.finishedJump = false;
-    //   }
-
-    //   if (jumpHeld > 150) {
-    //     gameState.duck.stillJump = false;
-    //   }
-    // } else if (gameState.lastDuck.stillJump) {
-    //   gameState.duck.stillJump = false;
-    // }
-
-    // // Camera, work on bounds and "follow" feel later
-    // // if (gameState.duck.x > camera.width - (camera.width/4)) {
-    //   camera.x = duck.x
-    // // }
   };
 
   var update = function(timeDelta) {
-
+    this.duck.rotation += 0.2;
   };
 
   var render = function() {
-
+    renderer.render(stage);
   };
 
   var main = function() {
@@ -134,7 +106,7 @@ function Game() {
     update((now-this.then)/1000); // ts
     render();
     this.then = now;
-    this.requestAnimationFrame(main);
+    this.requestAnimFrame(main);
   };
 
   // Public methods
@@ -146,3 +118,6 @@ function Game() {
     }
   }
 };
+
+var game = new Game();
+game.start();
