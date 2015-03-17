@@ -390,3 +390,39 @@ requestAnimationFrame = w.requestAnimationFrame || w.webkitRequestAnimationFrame
 init();
 var then = Date.now();
 main();
+
+function Game() {
+
+  var init = function() {
+
+  };
+
+  var handleInput = function() {
+
+  };
+
+  var update = function(timeDelta) {
+
+  };
+
+  var render = function() {
+
+  };
+
+  var main = function() {
+    handleInput();
+    var now = Date.now();
+    update((now-this.then)/1000); // ts
+    render();
+    this.then = now;
+    this.requestAnimationFrame(main);
+  };
+
+  // Public methods
+  return {
+    start: function() {
+      init();
+      this.then = Date.now();
+      main(Date.now());
+  }
+}
