@@ -70,14 +70,14 @@ function Game() {
     this.requestAnimFrame = window.requestAnimFrame;
 
     this.stage = new PIXI.Stage(0x66FF99);
- 
+
     // create a renderer instance.
     this.renderer = PIXI.autoDetectRenderer(400, 300);
     // add the renderer view element to the DOM
     document.body.appendChild(renderer.view);
     registerListeners();
     this.duck = new Duck({x: 200, y: 150}, "images/duck2.png");
- 
+
     stage.addChild(this.duck);
   };
 
@@ -112,6 +112,7 @@ function Game() {
   return {
     start: function() {
       init();
+      debugger;
       this.then = Date.now();
       main(Date.now());
     }
