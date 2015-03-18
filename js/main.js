@@ -1,5 +1,5 @@
 console.log("Ducks in Space, there are ducks in Spaaace");
-var debug = true;
+var debug = false;
 
 console.logger = function(print, func) {
   if (print) {
@@ -12,6 +12,8 @@ console.logger = function(print, func) {
 var Duck = require('./duck.js');
 
 function Game() {
+
+  var self = this;
 
   var buttonState = { // left right arrow and space only
     LEFT: false,
@@ -69,14 +71,14 @@ function Game() {
   var init = function() {
     this.requestAnimFrame = window.requestAnimFrame;
 
-    this.stage = new PIXI.Stage(0x66FF99);
+    this.stage = new PIXI.Stage(0x733572);
 
     // create a renderer instance.
-    this.renderer = PIXI.autoDetectRenderer(400, 300);
+    this.renderer = PIXI.autoDetectRenderer(800, 400);
     // add the renderer view element to the DOM
     document.body.appendChild(renderer.view);
     registerListeners();
-    this.duck = new Duck({x: 200, y: 150}, "images/duck2.png");
+    this.duck = new Duck({x: 200, y: 350}, "images/duck2.png");
 
     stage.addChild(this.duck);
   };
@@ -102,9 +104,9 @@ function Game() {
   var main = function() {
     handleInput();
     var now = Date.now();
-    update((now-this.then)/1000); // ts
+    update((now-self.then)/1000); // ts
     render();
-    this.then = now;
+    self.then = now;
     this.requestAnimFrame(main);
   };
 
@@ -113,8 +115,8 @@ function Game() {
     start: function() {
       init();
       debugger;
-      this.then = Date.now();
-      main(Date.now());
+      self.then = Date.now();
+      main();
     }
   }
 };

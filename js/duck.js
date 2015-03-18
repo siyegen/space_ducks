@@ -9,9 +9,10 @@ function Duck(startPos, duckImg) {
     this.anchor.x = 0.5;
     this.anchor.y = 0.5;
 
-    this.acceleration = 100;
+    this.acceleration = 1550;
+    this.friction = 6;
     this.currentSpeed = 0;
-    this.maxSpeed = 25;
+    this.maxSpeed = 400;
     // var sprite = duckImg;
     // var jumpSprite = duckJumpImg;
 };
@@ -20,24 +21,26 @@ Duck.prototype.constructor = Duck;
 Duck.prototype = Object.create(PIXI.Sprite.prototype);
 
 Duck.prototype.update = function(timeDelta) {
-  var dir = 0;
-  if (this.moving == -1) {
-    dir = 1;
-  }
-  if (this.moving == 1) {
-    dir = -1;
-  }
   //this.rotation += 0.1;
+  // if (Math.abs(this.currentSpeed) > this.maxSpeed) { // clamp speed, no more acc
+  //   console.debug("old", this.currentSpeed);
+  //   this.currentSpeed = Math.sign(this.currentSpeed) * this.maxSpeed;
+  //   console.debug("new", this.currentSpeed);
+  // }
+  // multiply by this.moving, gives us proper sign
+  var ddX = this.acceleration * this.moving;
+  ddX -= this.friction * this.currentSpeed; 
+  // if (ddX > -1 && ddX < 1) { // deadzone
+  //   this.currentSpeed = 0;
+  //   ddX = 0;
+  // }
+  // console.info(ddX, this.currentSpeed);
 
   debugger;
-  if (dir != 0) {
-    this.position.x = (0.5*(this.acceleration*dir)*(timeDelta*timeDelta)+(this.currentSpeed*timeDelta)+this.position.x);
-    // y = (0.5*(ACCELERATION*yDir)*(mod*mod)+(currentSpeed*mod)+y);
+  this.position.x = (0.5*ddX*(timeDelta*timeDelta))
+    + (this.currentSpeed*timeDelta) + this.position.x;
+  // y = (0.5*(ACCELERATION*yDir)*(mod*mod)+(currentSpeed*mod)+y);
 
-    this.currentSpeed = this.acceleration*timeDelta+this.currentSpeed;
-    // if (currentSpeed > maxSpeed) { // clamp speed, no more acc
-    //   currentSpeed = maxSpeed;
-    // }
-  }
+  this.currentSpeed = ddX * timeDelta + this.currentSpeed;
 }
 

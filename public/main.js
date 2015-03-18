@@ -10,9 +10,10 @@ function Duck(startPos, duckImg) {
     this.anchor.x = 0.5;
     this.anchor.y = 0.5;
 
-    this.acceleration = 100;
+    this.acceleration = 1550;
+    this.friction = 6;
     this.currentSpeed = 0;
-    this.maxSpeed = 25;
+    this.maxSpeed = 400;
     // var sprite = duckImg;
     // var jumpSprite = duckJumpImg;
 };
@@ -21,31 +22,33 @@ Duck.prototype.constructor = Duck;
 Duck.prototype = Object.create(PIXI.Sprite.prototype);
 
 Duck.prototype.update = function(timeDelta) {
-  var dir = 0;
-  if (this.moving == -1) {
-    dir = 1;
-  }
-  if (this.moving == 1) {
-    dir = -1;
-  }
   //this.rotation += 0.1;
+  // if (Math.abs(this.currentSpeed) > this.maxSpeed) { // clamp speed, no more acc
+  //   console.debug("old", this.currentSpeed);
+  //   this.currentSpeed = Math.sign(this.currentSpeed) * this.maxSpeed;
+  //   console.debug("new", this.currentSpeed);
+  // }
+  // multiply by this.moving, gives us proper sign
+  var ddX = this.acceleration * this.moving;
+  ddX -= this.friction * this.currentSpeed; 
+  // if (ddX > -1 && ddX < 1) { // deadzone
+  //   this.currentSpeed = 0;
+  //   ddX = 0;
+  // }
+  // console.info(ddX, this.currentSpeed);
 
   debugger;
-  if (dir != 0) {
-    this.position.x = (0.5*(this.acceleration*dir)*(timeDelta*timeDelta)+(this.currentSpeed*timeDelta)+this.position.x);
-    // y = (0.5*(ACCELERATION*yDir)*(mod*mod)+(currentSpeed*mod)+y);
+  this.position.x = (0.5*ddX*(timeDelta*timeDelta))
+    + (this.currentSpeed*timeDelta) + this.position.x;
+  // y = (0.5*(ACCELERATION*yDir)*(mod*mod)+(currentSpeed*mod)+y);
 
-    this.currentSpeed = this.acceleration*timeDelta+this.currentSpeed;
-    // if (currentSpeed > maxSpeed) { // clamp speed, no more acc
-    //   currentSpeed = maxSpeed;
-    // }
-  }
+  this.currentSpeed = ddX * timeDelta + this.currentSpeed;
 }
 
 
 },{}],2:[function(require,module,exports){
 console.log("Ducks in Space, there are ducks in Spaaace");
-var debug = true;
+var debug = false;
 
 console.logger = function(print, func) {
   if (print) {
@@ -58,6 +61,8 @@ console.logger = function(print, func) {
 var Duck = require('./duck.js');
 
 function Game() {
+
+  var self = this;
 
   var buttonState = { // left right arrow and space only
     LEFT: false,
@@ -115,14 +120,14 @@ function Game() {
   var init = function() {
     this.requestAnimFrame = window.requestAnimFrame;
 
-    this.stage = new PIXI.Stage(0x66FF99);
+    this.stage = new PIXI.Stage(0x733572);
 
     // create a renderer instance.
-    this.renderer = PIXI.autoDetectRenderer(400, 300);
+    this.renderer = PIXI.autoDetectRenderer(800, 400);
     // add the renderer view element to the DOM
     document.body.appendChild(renderer.view);
     registerListeners();
-    this.duck = new Duck({x: 200, y: 150}, "images/duck2.png");
+    this.duck = new Duck({x: 200, y: 350}, "images/duck2.png");
 
     stage.addChild(this.duck);
   };
@@ -148,9 +153,9 @@ function Game() {
   var main = function() {
     handleInput();
     var now = Date.now();
-    update((now-this.then)/1000); // ts
+    update((now-self.then)/1000); // ts
     render();
-    this.then = now;
+    self.then = now;
     this.requestAnimFrame(main);
   };
 
@@ -159,8 +164,8 @@ function Game() {
     start: function() {
       init();
       debugger;
-      this.then = Date.now();
-      main(Date.now());
+      self.then = Date.now();
+      main();
     }
   }
 };
